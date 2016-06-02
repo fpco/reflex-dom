@@ -17,11 +17,11 @@ module Reflex.Dom.Xhr
   , performRequestAsyncWithError
   , performRequestsAsync
   , performRequestsAsyncWithError
-  , getAndDecode
+  -- , getAndDecode
   , postJson
   , getMay
-  , decodeText
-  , decodeXhrResponse
+  -- , decodeText
+  -- , decodeXhrResponse
   , xmlHttpRequestGetReadyState
   , xmlHttpRequestGetResponseText
   , xmlHttpRequestGetStatus
@@ -58,6 +58,7 @@ import Reflex.Dom.Xhr.Exception
 import Reflex.Dom.Xhr.Foreign
 import Reflex.Dom.Xhr.ResponseType
 import Data.Typeable
+import Data.JSString (JSString)
 
 data XhrRequest
    = XhrRequest { _xhrRequest_method :: String
@@ -80,16 +81,16 @@ data XhrResponse
    = XhrResponse { _xhrResponse_status :: Word
                  , _xhrResponse_statusText :: Text
                  , _xhrResponse_response :: Maybe XhrResponseBody
-                 , _xhrResponse_responseText :: Maybe Text
+                 , _xhrResponse_responseText :: Maybe JSString
                  }
    deriving (Typeable)
 
 {-# DEPRECATED _xhrResponse_body "Use _xhrResponse_response or _xhrResponse_responseText instead." #-}
-_xhrResponse_body :: XhrResponse -> Maybe Text
+_xhrResponse_body :: XhrResponse -> Maybe JSString
 _xhrResponse_body = _xhrResponse_responseText
 
 {-# DEPRECATED xhrResponse_body "Use xhrResponse_response or xhrResponse_responseText instead." #-}
-xhrResponse_body :: Lens XhrResponse XhrResponse (Maybe Text) (Maybe Text)
+xhrResponse_body :: Lens XhrResponse XhrResponse (Maybe JSString) (Maybe JSString)
 xhrResponse_body = lens _xhrResponse_responseText (\r t -> r { _xhrResponse_responseText = t })
 
 instance Default XhrRequestConfig where
@@ -204,11 +205,13 @@ performRequestsAsync' newXhr req = performEventAsync $ ffor req $ \rs cb -> do
   _ <- liftIO $ forkIO $ cb =<< forM resps takeMVar
   return ()
 
+{-
 -- | Simplified interface to "GET" URLs and return decoded results.
 getAndDecode :: (FromJSON a, MonadWidget t m) => Event t String -> m (Event t (Maybe a))
 getAndDecode url = do
   r <- performRequestAsync $ fmap (\x -> XhrRequest "GET" x def) url
   return $ fmap decodeXhrResponse r
+-}
 
 -- | Create a "POST" request from an URL and thing with a JSON representation
 postJson :: (ToJSON a) => String -> a -> XhrRequest
@@ -224,10 +227,11 @@ getMay f e = do
     e' <- f (fmapMaybe id e)
     return $ leftmost [fmap Just e', fmapMaybe (maybe (Just Nothing) (const Nothing)) e]
 
+{-
 decodeText :: FromJSON a => Text -> Maybe a
 decodeText = decode . BL.fromStrict . encodeUtf8
 
 -- | Convenience function to decode JSON-encoded responses.
 decodeXhrResponse :: FromJSON a => XhrResponse -> Maybe a
 decodeXhrResponse = join . fmap decodeText . _xhrResponse_responseText
-
+-}

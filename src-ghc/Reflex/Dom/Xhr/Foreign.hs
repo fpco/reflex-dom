@@ -102,16 +102,21 @@ xmlHttpRequestGetResponse xhr = do
        False ->  case mrt of
          Just XhrResponseType_ArrayBuffer -> Just . XhrResponseBody_ArrayBuffer <$> bsFromArrayBuffer c t
          Just XhrResponseType_Blob -> Just . XhrResponseBody_Blob . Blob . castForeignPtr <$> newForeignPtr_ t
-         Just XhrResponseType_Default -> fmap (XhrResponseBody_Default . T.pack) <$> fromJSStringMaybe c t
-         Just XhrResponseType_Text -> fmap (XhrResponseBody_Text . T.pack) <$> fromJSStringMaybe c t
+         Just XhrResponseType_Default -> do
+             isNull <- jsvalueisnull c t
+             return $ if isNull then Nothing else Just (XhrResponseType_Default (coerce t))
+         Just XhrResponseType_Text -> do
+             isNull <- jsvalueisnull c t
+             return $ if isNull then Nothing else Just (XhrResponseType_Text (coerce t)
          _ -> return Nothing
 
-xmlHttpRequestGetResponseText :: XMLHttpRequest -> IO (Maybe Text)
+xmlHttpRequestGetResponseText :: XMLHttpRequest -> IO (Maybe JSString)
 xmlHttpRequestGetResponseText xhr = do
   let c = xhrContext xhr
   script <- jsstringcreatewithutf8cstring "this.responseText"
   t <- jsevaluatescript c script (xhrValue xhr) nullPtr 1 nullPtr
-  fmap (fmap T.pack) $ fromJSStringMaybe c t
+  isNull <- jsvalueisnull t
+  return $ if isNull then Nothing else Just (coerce t)
 
 xmlHttpRequestSend :: XMLHttpRequest -> Maybe String -> IO ()
 xmlHttpRequestSend xhr payload = do
@@ -213,4 +218,3 @@ xmlHttpRequestSetWithCredentials xhr b = do
   script <- jsstringcreatewithutf8cstring "this[0].withCredentials = this[1]"
   _ <- jsevaluatescript c script o nullPtr 1 nullPtr
   return ()
-
